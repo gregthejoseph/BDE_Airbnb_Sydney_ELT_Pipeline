@@ -3,8 +3,7 @@
     alias='dim_listing'
 ) }}
 
-
-select distinct
+select
     listing_id,
     listing_neighbourhood,
     property_type,
@@ -12,7 +11,8 @@ select distinct
     accommodates,
     price,
     has_availability,
-    availability_30
-    
+    availability_30,
+    dbt_valid_from,
+    dbt_valid_to
 from {{ ref('snap_listing') }}
 where listing_id is not null

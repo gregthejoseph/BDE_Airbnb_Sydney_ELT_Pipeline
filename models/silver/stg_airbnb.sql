@@ -77,12 +77,42 @@ renamed as (
 
         -- ⭐ Reviews (fill NaN/null with 0)
         number_of_reviews,
-        coalesce(review_scores_rating, 0)           as review_scores_rating,
-        coalesce(review_scores_accuracy, 0)         as review_scores_accuracy,
-        coalesce(review_scores_cleanliness, 0)      as review_scores_cleanliness,
-        coalesce(review_scores_checkin, 0)          as review_scores_checkin,
-        coalesce(review_scores_communication, 0)    as review_scores_communication,
-        coalesce(review_scores_value, 0)            as review_scores_value,
+
+        case 
+            when review_scores_rating::text ILIKE 'nan' then 0
+            when review_scores_rating::numeric != review_scores_rating::numeric then 0  -- catches float NaN
+            else coalesce(review_scores_rating, 0)
+        end as review_scores_rating,
+
+        case 
+            when review_scores_accuracy::text ILIKE 'nan' then 0
+            when review_scores_accuracy::numeric != review_scores_accuracy::numeric then 0
+            else coalesce(review_scores_accuracy, 0)
+        end as review_scores_accuracy,
+
+        case 
+            when review_scores_cleanliness::text ILIKE 'nan' then 0
+            when review_scores_cleanliness::numeric != review_scores_cleanliness::numeric then 0
+            else coalesce(review_scores_cleanliness, 0)
+        end as review_scores_cleanliness,
+
+        case 
+            when review_scores_checkin::text ILIKE 'nan' then 0
+            when review_scores_checkin::numeric != review_scores_checkin::numeric then 0
+            else coalesce(review_scores_checkin, 0)
+        end as review_scores_checkin,
+
+        case 
+            when review_scores_communication::text ILIKE 'nan' then 0
+            when review_scores_communication::numeric != review_scores_communication::numeric then 0
+            else coalesce(review_scores_communication, 0)
+        end as review_scores_communication,
+
+        case 
+            when review_scores_value::text ILIKE 'nan' then 0
+            when review_scores_value::numeric != review_scores_value::numeric then 0
+            else coalesce(review_scores_value, 0)
+        end as review_scores_value,
 
         -- 🕒 Metadata
         current_timestamp as record_loaded_at
