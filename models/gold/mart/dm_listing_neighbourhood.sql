@@ -1,7 +1,7 @@
 {{ config(
     materialized = 'view',
     schema       = 'gold',
-    alias        = 'dm_property_type'
+    alias        = 'dm_listing_neighbourhood'
 ) }}
 
 with base as (
@@ -15,9 +15,8 @@ with base as (
         f.review_scores_rating,
         f.is_active,
         f.est_revenue,
-        l.property_type,
-        l.room_type,
-        l.accommodates,
+
+        l.listing_neighbourhood,
         h.host_is_superhost
     from {{ ref('fact_airbnb') }} f
     left join {{ ref('dim_listing') }} l
@@ -32,54 +31,50 @@ with base as (
 
 agg as (
     select
-        property_type,
-        room_type,
-        accommodates,
+        listing_neighbourhood,
         month_year,
-        count(distinct listing_id)                                  as total_listings,
-        count(distinct case when is_active = 1 then listing_id end) as active_listings,
+        count(distinct listing_id)                                         as total_listings,
+        count(distinct case when is_active = 1 then listing_id end)        as active_listings,
         (count(distinct case when is_active = 1 then listing_id end)::numeric /
-         nullif(count(distinct listing_id), 0)) * 100               as active_listing_rate,
+         nullif(count(distinct listing_id), 0)) * 100                      as active_listing_rate,
 
-        min(case when is_active = 1 then price end)                 as min_price_active,
-        max(case when is_active = 1 then price end)                 as max_price_active,
+        min(case when is_active = 1 then price end)                        as min_price_active,
+        max(case when is_active = 1 then price end)                        as max_price_active,
         percentile_cont(0.5) within group (order by price)
-            filter (where is_active = 1)                            as median_price_active,
-        avg(case when is_active = 1 then price end)                 as avg_price_active,
+            filter (where is_active = 1)                                   as median_price_active,
+        avg(case when is_active = 1 then price end)                        as avg_price_active,
 
-        count(distinct host_id)                                     as total_hosts,
+        count(distinct host_id)                                            as total_hosts,
         count(distinct case when host_is_superhost = true then host_id end) as superhosts,
         (count(distinct case when host_is_superhost = true then host_id end)::numeric /
-         nullif(count(distinct host_id), 0)) * 100                  as superhost_rate,
+         nullif(count(distinct host_id), 0)) * 100                         as superhost_rate,
 
-        avg(case when is_active = 1 then review_scores_rating end)  as avg_review_score_active,
+        avg(case when is_active = 1 then review_scores_rating end)         as avg_review_score_active,
         sum(case when is_active = 1 then greatest(0, 30 - availability_30) end) as total_stays,
-        avg(case when is_active = 1 then est_revenue end)           as avg_est_revenue_active
+        avg(case when is_active = 1 then est_revenue end)                  as avg_est_revenue_active
     from base
-    group by property_type, room_type, accommodates, month_year
+    group by listing_neighbourhood, month_year
 ),
 
 with_pct as (
     select
         a.*,
         ((a.active_listings - lag(a.active_listings)
-           over (partition by property_type, room_type, accommodates order by month_year))::numeric
+           over (partition by listing_neighbourhood order by month_year))
          / nullif(lag(a.active_listings)
-           over (partition by property_type, room_type, accommodates order by month_year), 0)) * 100
-         as pct_change_active_listings,
+           over (partition by listing_neighbourhood order by month_year), 0)::numeric) * 100
+           as pct_change_active_listings,
         (((a.total_listings - a.active_listings)
            - lag(a.total_listings - a.active_listings)
-           over (partition by property_type, room_type, accommodates order by month_year))::numeric
+           over (partition by listing_neighbourhood order by month_year))
          / nullif(lag(a.total_listings - a.active_listings)
-           over (partition by property_type, room_type, accommodates order by month_year), 0)) * 100
-         as pct_change_inactive_listings
+           over (partition by listing_neighbourhood order by month_year), 0)::numeric) * 100
+           as pct_change_inactive_listings
     from agg a
 )
 
 select
-    property_type,
-    room_type,
-    accommodates,
+    listing_neighbourhood,
     month_year,
     active_listing_rate,
     min_price_active,
@@ -94,4 +89,4 @@ select
     total_stays,
     avg_est_revenue_active
 from with_pct
-order by property_type, room_type, accommodates, month_year
+order by listing_neighbourhood, month_year

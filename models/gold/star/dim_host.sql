@@ -1,5 +1,6 @@
 {{ config(
     materialized='table',
+    schema='gold',
     alias='dim_host'
 ) }}
 
@@ -13,3 +14,4 @@ select
     dbt_valid_to
 from {{ ref('snap_host') }}
 where host_id is not null
+  and dbt_valid_to is null
